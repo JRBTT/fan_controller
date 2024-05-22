@@ -3,10 +3,12 @@
 #include <stdint.h>
 #include <math.h>
 #include <avr/interrupt.h>
+
 #include "usart.h"
 #include "bit.h"
 #include "timer.h"
 #include "twi.h"
+#include "thermistor.h"
 
 #define FOSC 16000000 // Frequency Oscillator 16Mhz for Uno R3
 #define BAUD 9600 // 9600 Bits per second
@@ -49,11 +51,14 @@ void setup()
 int main()
 {
     setup();
+    float temp;
+
     while(1)
     {
         if (adcReady){
-            usart_tx_string(">ADC Value: ");
-            usart_tx_float(adcResult, 3, 2);
+            usart_tx_string(">Temperature: ");
+            temp = getTemperature(adcResult);
+            usart_tx_float(temp, 3, 2);
             usart_transmit('\n');
             adcReady = false;
             updateADC();
