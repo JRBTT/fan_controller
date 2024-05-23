@@ -22,9 +22,16 @@ volatile float T2 = 0.0;
 volatile float T_high = 0.0;
 volatile float T_low = 0.0;
 volatile float freq = 0.0;
+
+volatile float T12 = 0.0;
+volatile float T22 = 0.0;
+volatile float T_high2 = 0.0;
+volatile float T_low2 = 0.0;
+volatile float freq2 = 0.0;
+
 volatile uint32_t timerValue = 0;
 volatile bool periodCaptured = false;
-volatile bool interrupt0Triggered = false;
+volatile bool interruptTriggered = false;
 volatile int failure_code = 0;
 
 void setAdcbit(){
@@ -47,21 +54,21 @@ ISR(ADC_vect) {
     // Do something with result
 }
 
-// ISR(TIMER1_CAPT_vect) {
-//   float capturedValue = ICR1;
+ISR(TIMER1_CAPT_vect) {
+  float capturedValue2 = ICR1;
 
-//   if (!(TCCR1B & (1 << ICES1))) {
-//     // Falling edge
-//     T1 = capturedValue;
-//     TCCR1B ^= (1 << ICES1); // Toggle the edge detection
-//     T_low = T1 - T2;
-//   } else {
-//     // Rising edge
-//     T2 = capturedValue;
-//     TCCR1B ^= (1 << ICES1); // Toggle the edge detection
-//     T_high = T2 - T1;
-//   }
-// }
+  if (!(TCCR1B & (1 << ICES1))) {
+    // Falling edge
+    T12 = capturedValue2;
+    TCCR1B ^= (1 << ICES1); // Toggle the edge detection
+    T_low = T12 - T22;
+  } else {
+    // Rising edge
+    T22 = capturedValue2;
+    TCCR1B ^= (1 << ICES1); // Toggle the edge detection
+    T_high2 = T22 - T12;
+  }
+}
 
 ISR(ANALOG_COMP_vect) {
   float capturedValue = TCNT1;  // Capture the current value of Timer1
@@ -89,9 +96,9 @@ void setupTach(){
   // OCR1B = 40;
 
   // Input Capture setup
-  // TCCR1B |= (1 << ICES1); // Capture on rising edge
-  // bitClear(DDRB, PB0); // Set ICP1 (PB0) as input
-  // TIMSK1 |= (1 << ICIE1); // Enable Input Capture interrupt
+  TCCR1B |= (1 << ICES1); // Capture on rising edge
+  bitClear(DDRB, PB0); // Set ICP1 (PB0) as input
+  TIMSK1 |= (1 << ICIE1); // Enable Input Capture interrupt
 
   // Analog Comparator setup
   bitClear(DDRD, PD7); // negative
@@ -99,21 +106,19 @@ void setupTach(){
 
   ACSR = (0 << ACD) | (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0); // Bandgap reference, rising edge
   ACSR |= (1 << ACIE); // Enable Analog Comparator interrupt
-
-
   TCCR1B = (1 << CS12); // prescaler 256 (62.5kHz) with overflow at1.04857s
 
 }
 
 ISR(INT0_vect) {
   // Handle the interrupt
-  interrupt0Triggered = true;
+  interruptTriggered = true;
   failure_code = 1;
 }
 
 ISR(INT1_vect) {
   // Handle the interrupt
-  interrupt0Triggered = true;
+  interruptTriggered = true;
   failure_code = 2;
 }
 
@@ -159,26 +164,37 @@ int main()
 {
     setup();
     
-    // float temp;
+    float temp;
 
     while(1)
     {
-      // if (adcReady){
-      //     usart_tx_string(">Temperature: ");
-      //     temp = getTemperature(adcResult);
-      //     usart_tx_float(temp, 3, 2);
-      //     usart_transmit('\n');
-      //     adcReady = false;
-      //     updateADC();
-      // }
+      if (adcReady){
+          usart_tx_string(">Temperature: ");
+          temp = getTemperature(adcResult);
+          usart_tx_float(temp, 3, 2);
+          usart_transmit('\n');
+          adcReady = false;
+          updateADC();
+      }
       if (T_high + T_low > 0.0){
         float time = (T_high + T_low) * 0.000016;
         freq = 1 / time;
-        usart_tx_string(">fan freq: ");
+        usart_tx_string(">pump freq: ");
         usart_tx_float(freq, 6, 3);
         usart_transmit('\n');
       }
-      if (interrupt0Triggered){
+
+      if (T_high2 + T_low2 > 0.0){
+        float time2 = (T_high2 + T_low2) * 0.000016;
+        freq2 = (1 / time2)/2;
+
+        usart_tx_string(">fan freq: ");
+        usart_tx_float(freq2, 6, 3);
+        usart_transmit('\n');
+      }
+
+
+      if (interruptTriggered){
         break;
       }
     }
