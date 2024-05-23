@@ -87,13 +87,13 @@ ISR(ANALOG_COMP_vect) {
 }
 
 void setupTach(){
-  // bitSet(DDRB, PB2); //delete this
-  // Fast PWM with OCR1A as TOP
-  // TCCR1A = (1 << WGM11) | (1 << WGM10);
-  // TCCR1B = (1 << WGM13) | (1 << WGM12);
-  // TCCR1A |= (1 << COM1B1); // non-inverting mode
-  // OCR1A = 79; // 25kHz
-  // OCR1B = 40;
+  //Fast PWM with OCR2A as TOP
+
+  TCCR2A = (1 << WGM21) | (1 << WGM20);
+  TCCR2B = (1 << WGM22);
+  TCCR2A |= (1 << COM2B1); // non-inverting mode
+  OCR2A = 79; // 25kHz
+  OCR2B = 40;
 
   // Input Capture setup
   TCCR1B |= (1 << ICES1); // Capture on rising edge
@@ -106,20 +106,14 @@ void setupTach(){
 
   ACSR = (0 << ACD) | (1 << ACBG) | (1 << ACIS1) | (1 << ACIS0); // Bandgap reference, rising edge
   ACSR |= (1 << ACIE); // Enable Analog Comparator interrupt
-  TCCR1B = (1 << CS12); // prescaler 256 (62.5kHz) with overflow at1.04857s
+  TCCR2B |= (1 << CS21); // prescaler 8 (2MHz) 
+  TCCR1B |= (1 << CS12); // prescaler 256 (62.5kHz) with overflow at1.04857s
 
 }
 
 ISR(INT0_vect) {
   // Handle the interrupt
   interruptTriggered = true;
-  failure_code = 1;
-}
-
-ISR(INT1_vect) {
-  // Handle the interrupt
-  interruptTriggered = true;
-  failure_code = 2;
 }
 
 void setup()
@@ -129,10 +123,7 @@ void setup()
   EICRA &= ~(1 << ISC00); // Clear ISC00
   EIMSK |= (1 << INT0); // Enable INT0
 
-  DDRD &= ~(1 << PD3);
-  EICRA |= (1 << ISC11); // Set ISC01
-  EICRA &= ~(1 << ISC10); // Clear ISC00
-  EIMSK |= (1 << INT1); // Enable INT0
+  DDRD |= (1 << PD3); // PWM output
 
   usart_init(MYUBRR); // 103-9600 bps; 8-115200
   setupTach();
@@ -140,9 +131,6 @@ void setup()
   sei(); // enable global interrupts
 
   updateADC();
-
-  DDRB |= (1 << PB5);
-  // setup PWM
 }
 
 void alarm(){
@@ -192,23 +180,11 @@ int main()
         usart_tx_float(freq2, 6, 3);
         usart_transmit('\n');
       }
-
-
       if (interruptTriggered){
         break;
       }
     }
-
-    usart_tx_string(">Power failure: ");
-    if (failure_code == 1){
-      usart_tx_string("Fans\n");
-    }
-    else if (failure_code == 2){ 
-      usart_tx_string("Pump\n");
-    }
-    else{
-      usart_tx_string("Unknown\n");
-    }
+    usart_tx_string(">Power failure: Pump");
     alarm();
 
 }
