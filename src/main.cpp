@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <math.h>
 #include <avr/interrupt.h>
-
 #include "usart.h"
 #include "bit.h"
 #include "timer.h"
@@ -26,6 +25,7 @@ volatile float freq = 0.0;
 volatile uint32_t timerValue = 0;
 volatile bool periodCaptured = false;
 volatile bool interrupt0Triggered = false;
+volatile int failure_code = 0;
 
 void setAdcbit(){
   // ADC initialization for reading the thermistor
@@ -108,6 +108,7 @@ void setupTach(){
 ISR(INT0_vect) {
   // Handle the interrupt
   interrupt0Triggered = true;
+  failure_code = 1;
 }
 
 
@@ -128,9 +129,24 @@ void setup()
 
   updateADC();
 
-
+  DDRB |= (1 << PB5);
   // setup PWM
 }
+
+void alarm(){
+  // Make the buzzer sound at a frequency of 1kHz
+  while(1){
+    for (int i = 0; i < 1000; i++) {
+      // Turn the buzzer on and off to create a square wave
+      PORTB |= (1 << PB5);
+      _delay_us(500); // 500us high
+      PORTB &= ~(1 << PB5);
+      _delay_us(500); // 500us low
+    }
+    _delay_ms(1000);
+  }
+}
+
 
 int main()
 {
@@ -159,5 +175,14 @@ int main()
         break;
       }
     }
-    usart_tx_string(">Power failure\n");
+
+    usart_tx_string(">Power failure: ");
+    if (failure_code == 1){
+      usart_tx_string("Fans\n");
+    }
+    else{
+      usart_tx_string("Unknown\n");
+    }
+    alarm();
+
 }
