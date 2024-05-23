@@ -111,6 +111,11 @@ ISR(INT0_vect) {
   failure_code = 1;
 }
 
+ISR(INT1_vect) {
+  // Handle the interrupt
+  interrupt0Triggered = true;
+  failure_code = 2;
+}
 
 void setup()
 {
@@ -119,12 +124,14 @@ void setup()
   EICRA &= ~(1 << ISC00); // Clear ISC00
   EIMSK |= (1 << INT0); // Enable INT0
 
+  DDRD &= ~(1 << PD3);
+  EICRA |= (1 << ISC11); // Set ISC01
+  EICRA &= ~(1 << ISC10); // Clear ISC00
+  EIMSK |= (1 << INT1); // Enable INT0
+
   usart_init(MYUBRR); // 103-9600 bps; 8-115200
   setupTach();
   setAdcbit(); // set ADC5 as input
-  bitClear(DDRB, PB2); // set PB1 as input
-  PCICR |= (1 << PCIE0);
-  PCMSK0 |= (1 << PCINT2);
   sei(); // enable global interrupts
 
   updateADC();
@@ -179,6 +186,9 @@ int main()
     usart_tx_string(">Power failure: ");
     if (failure_code == 1){
       usart_tx_string("Fans\n");
+    }
+    else if (failure_code == 2){ 
+      usart_tx_string("Pump\n");
     }
     else{
       usart_tx_string("Unknown\n");
