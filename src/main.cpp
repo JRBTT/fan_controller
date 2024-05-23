@@ -25,6 +25,7 @@ volatile float T_low = 0.0;
 volatile float freq = 0.0;
 volatile uint32_t timerValue = 0;
 volatile bool periodCaptured = false;
+volatile bool interrupt0Triggered = false;
 
 void setAdcbit(){
   // ADC initialization for reading the thermistor
@@ -79,7 +80,7 @@ ISR(ANALOG_COMP_vect) {
 }
 
 void setupTach(){
-  bitSet(DDRB, PB2);
+  // bitSet(DDRB, PB2); //delete this
   // Fast PWM with OCR1A as TOP
   // TCCR1A = (1 << WGM11) | (1 << WGM10);
   // TCCR1B = (1 << WGM13) | (1 << WGM12);
@@ -104,12 +105,27 @@ void setupTach(){
 
 }
 
+ISR(INT0_vect) {
+  // Handle the interrupt
+  interrupt0Triggered = true;
+}
+
+
 void setup()
 {
+  DDRD &= ~(1 << PD2);
+  EICRA |= (1 << ISC01); // Set ISC01
+  EICRA &= ~(1 << ISC00); // Clear ISC00
+  EIMSK |= (1 << INT0); // Enable INT0
+
   usart_init(MYUBRR); // 103-9600 bps; 8-115200
   setupTach();
   setAdcbit(); // set ADC5 as input
+  bitClear(DDRB, PB2); // set PB1 as input
+  PCICR |= (1 << PCIE0);
+  PCMSK0 |= (1 << PCINT2);
   sei(); // enable global interrupts
+
   updateADC();
 
 
@@ -120,7 +136,7 @@ int main()
 {
     setup();
     
-    float temp;
+    // float temp;
 
     while(1)
     {
@@ -139,5 +155,9 @@ int main()
         usart_tx_float(freq, 6, 3);
         usart_transmit('\n');
       }
+      if (interrupt0Triggered){
+        break;
+      }
     }
+    usart_tx_string(">Power failure\n");
 }
