@@ -38,19 +38,32 @@ ISR(ADC_vect) {
     // Do something with result
 }
 
+void setupPWM(){
+  bitSet(DDRB, PB2);
+  // Fast PWM with OCR1A as TOP
+  TCCR1A = (1 << WGM11) | (1 << WGM10);
+  TCCR1B = (1 << WGM13) | (1 << WGM12);
+  TCCR1A |= (1 << COM1B1); // non-inverting mode
+  OCR1A = 79; // 25kHz
+  TCCR1B |= (1 << CS11);
+  OCR1B = 31;
+}
+
 void setup()
 {
   usart_init(MYUBRR); // 103-9600 bps; 8-115200
   setAdcbit(); // set ADC5 as input
-  bitSet(ADCSRA, ADEN); // enable ADC
-  bitSet(ADCSRA, ADIE); // enable ADC interrupt
   sei(); // enable global interrupts
   updateADC();
+
+
+  // setup PWM
 }
 
 int main()
 {
     setup();
+    setupPWM();
     float temp;
 
     while(1)
