@@ -155,6 +155,10 @@ void alarm(){
   }
 }
 
+float convertToRPM(float frequency){
+  float rpm = (frequency / 2)* 60;
+  return rpm;
+}
 
 int main()
 {
@@ -229,7 +233,8 @@ int main()
         float time = (T_high + T_low) * 0.000016;
         freq = 1 / time;
         usart_tx_string(">pump freq: ");
-        usart_tx_float(freq, 6, 3);
+        float rpm = convertToRPM(freq);
+        usart_tx_float(rpm, 6, 3);
         usart_transmit('\n');
       }
 
@@ -237,7 +242,8 @@ int main()
         float time2 = (T_high2 + T_low2) * 0.000016;
         freq2 = (1 / time2)/2;
         usart_tx_string(">fan freq: ");
-        usart_tx_float(freq2, 6, 3);
+        float rpm2 = convertToRPM(freq2);
+        usart_tx_float(rpm2, 6, 3);
         usart_transmit('\n');
       }
       if (interruptTriggered){
