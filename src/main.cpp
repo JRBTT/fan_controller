@@ -129,6 +129,14 @@ void setup()
   setupTach();
   setAdcbit(); // set ADC5 as input
   sei(); // enable global interrupts
+  // Set PB1, PB2, PB3, PB4 as outputs
+  DDRB |= (1 << PB1) | (1 << PB2) | (1 << PB4);
+  // PORTB |= (1 << PB1) | (1 << PB2) | (1 << PB4);
+  DDRD |= (1 << PD5);
+  PORTB |= (1 << PB1);
+  bitClear(DDRD, PD4); 
+  bitSet(PORTD, PD4); // pullup
+
 
   updateADC();
 }
@@ -153,9 +161,47 @@ int main()
     setup();
     
     float temp;
+    int previous_button1 = 1;
+    int i = 0;
 
     while(1)
     {
+
+      // switch device on or off
+      int current_button1 = bitRead(PIND, PIND4);
+      if (current_button1 != previous_button1 && current_button1 == 0) {
+          _delay_ms(50);
+          if (bitRead(PIND, PIND4) == current_button1) {
+            for(int j = 0; j < 2; j++){
+              switch(i) {
+                case 0:
+                  bitInverse(PORTB, PB1);
+                  break;
+                case 1:
+                  bitInverse(PORTB, PB2);
+                  break;
+                case 2:
+                  bitInverse(PORTD, PD5);
+                  break;
+                case 3:
+                  bitInverse(PORTB, PB4);
+                  break;
+                case 4:
+                // Automatic mode
+                  PORTB ^= (1 << PB1) | (1 << PB2) | (1 << PB4);
+                  PORTD ^= (1 << PD5);
+              }
+              if (j != 1){
+                i++;
+              }
+              if (i > 4) {
+                i = 0;
+              }
+            }
+          }
+      }
+      previous_button1 = current_button1;
+
       if (adcReady){
           usart_tx_string(">Temperature: ");
           temp = getTemperature(adcResult);
