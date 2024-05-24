@@ -213,6 +213,16 @@ int main()
           usart_tx_float(temp, 3, 2);
           usart_transmit('\n');
           adcReady = false;
+          if (automatic && temp > 0.0){
+            if (temp > 55.0) {
+              OCR2B = 79;
+            }
+            else{
+              float temp2 = temp - 25.0;
+              float dutyCycle = temp2 / 30.0;
+              OCR2B = (int)(dutyCycle * 79);
+            }
+          }
           updateADC();
       }
       if (T_high + T_low > 0.0){
@@ -226,7 +236,6 @@ int main()
       if (T_high2 + T_low2 > 0.0){
         float time2 = (T_high2 + T_low2) * 0.000016;
         freq2 = (1 / time2)/2;
-
         usart_tx_string(">fan freq: ");
         usart_tx_float(freq2, 6, 3);
         usart_transmit('\n');
