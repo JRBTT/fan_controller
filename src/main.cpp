@@ -118,6 +118,7 @@ ISR(INT0_vect) {
 
 void setup()
 {
+
   DDRD &= ~(1 << PD2);
   EICRA |= (1 << ISC01); // Set ISC01
   EICRA &= ~(1 << ISC00); // Clear ISC00
@@ -130,7 +131,7 @@ void setup()
   setAdcbit(); // set ADC5 as input
   sei(); // enable global interrupts
   // Set PB1, PB2, PB3, PB4 as outputs
-  DDRB |= (1 << PB1) | (1 << PB2) | (1 << PB4);
+  DDRB |= (1 << PB1) | (1 << PB2) | (1 << PB4) | (1 << PB5); // PB5 is alarm
   // PORTB |= (1 << PB1) | (1 << PB2) | (1 << PB4);
   DDRD |= (1 << PD5);
   PORTB |= (1 << PB1);
@@ -250,7 +251,7 @@ int main()
         break;
       }
     }
-    usart_tx_string(">Power failure: Pump");
+    usart_tx_string("Power failure: Pump");
     alarm();
 
 }
