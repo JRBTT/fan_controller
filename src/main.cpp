@@ -93,7 +93,7 @@ void setupTach(){
   TCCR2B = (1 << WGM22);
   TCCR2A |= (1 << COM2B1); // non-inverting mode
   OCR2A = 79; // 25kHz
-  OCR2B = 40;
+  OCR2B = 20; //default 25% duty cycle
 
   // Input Capture setup
   TCCR1B |= (1 << ICES1); // Capture on rising edge
@@ -163,7 +163,7 @@ int main()
     float temp;
     int previous_button1 = 1;
     int i = 0;
-
+    bool automatic = false;
     while(1)
     {
 
@@ -176,20 +176,25 @@ int main()
               switch(i) {
                 case 0:
                   bitInverse(PORTB, PB1);
+                  OCR2B = 20;
                   break;
                 case 1:
                   bitInverse(PORTB, PB2);
+                  OCR2B = 40;
                   break;
                 case 2:
                   bitInverse(PORTD, PD5);
+                  OCR2B = 60;
                   break;
                 case 3:
                   bitInverse(PORTB, PB4);
+                  OCR2B = 79;
                   break;
                 case 4:
                 // Automatic mode
                   PORTB ^= (1 << PB1) | (1 << PB2) | (1 << PB4);
                   PORTD ^= (1 << PD5);
+                  automatic = !automatic;
               }
               if (j != 1){
                 i++;
