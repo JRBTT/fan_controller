@@ -5,7 +5,7 @@ float getTemperature(float analog){
     float voltageDividerR1 = 20000;
     float bValue = 3470;
     float R1 = 10000;
-    float T1 = 298.15;
+    float T1 = 298.15; // 25 degrees celsius
     float euler = 2.718281828;
     float R2;
     float T2;

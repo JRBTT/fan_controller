@@ -36,9 +36,13 @@ volatile int failure_code = 0;
 
 void setAdcbit(){
   // ADC initialization for reading the thermistor
-  ADMUX = (1 << REFS0) | (1 << MUX0) | (1 << MUX2);
-  ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
+  ADMUX = (1 << REFS0) | (1 << MUX0) | (1 << MUX2); //AVCC with external capacitor at AREF pin ADC5 as input
+  ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2); 
+  // ADPS is prescaler bits 128 prescaler
+  // ADEN is ADC Enable
+  // ADIE is ADC Interrupt Enable
   DIDR0 = (1 << ADC5D);
+  // disabling digital input buffer to reduce power consumption
 }
 
 int updateADC(){
@@ -86,7 +90,7 @@ ISR(ANALOG_COMP_vect) {
   }
 }
 
-void setupTach(){
+void setupSensors(){
   //Fast PWM with OCR2A as TOP
 
   TCCR2A = (1 << WGM21) | (1 << WGM20);
@@ -127,7 +131,7 @@ void setup()
   DDRD |= (1 << PD3); // PWM output
 
   usart_init(MYUBRR); // 103-9600 bps; 8-115200
-  setupTach();
+  setupSensors();
   setAdcbit(); // set ADC5 as input
   sei(); // enable global interrupts
   // Set PB1, PB2, PB3, PB4 as outputs
@@ -180,26 +184,26 @@ int main()
             for(int j = 0; j < 2; j++){
               switch(i) {
                 case 0:
-                  bitInverse(PORTB, PB1);
-                  OCR2B = 20;
+                  bitInverse(PORTB, PB1); // white light
+                  OCR2B = 20; // 25% duty cycle
                   break;
                 case 1:
-                  bitInverse(PORTB, PB2);
-                  OCR2B = 40;
+                  bitInverse(PORTB, PB2); // green light
+                  OCR2B = 40; // 50% duty cycle
                   break;
                 case 2:
-                  bitInverse(PORTD, PD5);
-                  OCR2B = 60;
+                  bitInverse(PORTD, PD5); // yellow light
+                  OCR2B = 60; // 75% duty cycle
                   break;
                 case 3:
-                  bitInverse(PORTB, PB4);
-                  OCR2B = 79;
+                  bitInverse(PORTB, PB4); // red light
+                  OCR2B = 79; // 100% duty cycle
                   break;
                 case 4:
                 // Automatic mode
-                  PORTB ^= (1 << PB1) | (1 << PB2) | (1 << PB4);
-                  PORTD ^= (1 << PD5);
-                  automatic = !automatic;
+                  PORTB ^= (1 << PB1) | (1 << PB2) | (1 << PB4); // all lights on
+                  PORTD ^= (1 << PD5); // all lights on
+                  automatic = !automatic; // follows the temperature sensor
               }
               if (j != 1){
                 i++;
@@ -213,7 +217,7 @@ int main()
       previous_button1 = current_button1;
 
       if (adcReady){
-          usart_tx_string(">Temperature: ");
+          usart_tx_string(">Temperature C: ");
           temp = getTemperature(adcResult);
           usart_tx_float(temp, 3, 2);
           usart_transmit('\n');
@@ -223,7 +227,7 @@ int main()
               OCR2B = 79;
             }
             else{
-              float temp2 = temp - 25.0;
+              float temp2 = temp - 25.0; // Between 25 degrees and 55 degrees 0 - 100% duty cycle
               float dutyCycle = temp2 / 30.0;
               OCR2B = (int)(dutyCycle * 79);
             }
@@ -233,7 +237,7 @@ int main()
       if (T_high + T_low > 0.0){
         float time = (T_high + T_low) * 0.000016;
         freq = 1 / time;
-        usart_tx_string(">pump freq: ");
+        usart_tx_string(">pump rpm: ");
         float rpm = convertToRPM(freq);
         usart_tx_float(rpm, 6, 3);
         usart_transmit('\n');
@@ -242,7 +246,7 @@ int main()
       if (T_high2 + T_low2 > 0.0){
         float time2 = (T_high2 + T_low2) * 0.000016;
         freq2 = (1 / time2)/2;
-        usart_tx_string(">fan freq: ");
+        usart_tx_string(">fan rpm: ");
         float rpm2 = convertToRPM(freq2);
         usart_tx_float(rpm2, 6, 3);
         usart_transmit('\n');
