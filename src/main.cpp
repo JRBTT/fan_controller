@@ -5,34 +5,29 @@
 #include <avr/interrupt.h>
 #include "usart.h"
 #include "bit.h"
-#include "timer.h"
-#include "twi.h"
 #include "thermistor.h"
 
 #define FOSC 16000000 // Frequency Oscillator 16Mhz for Uno R3
 #define BAUD 9600 // 9600 Bits per second
 #define MYUBRR FOSC / 16 / BAUD - 1 // My USART Baud Rate Register
-#define MAXPWM 1023
-#define MAXDELAY 61 // 1 second
 
 volatile bool adcReady = false; 
 volatile int adcResult = 0;
+
+// for input capture of fan
 volatile float T1 = 0.0;
 volatile float T2 = 0.0;
 volatile float T_high = 0.0;
 volatile float T_low = 0.0;
 volatile float freq = 0.0;
-
+// for analog comparator for pump
 volatile float T12 = 0.0;
 volatile float T22 = 0.0;
 volatile float T_high2 = 0.0;
 volatile float T_low2 = 0.0;
 volatile float freq2 = 0.0;
 
-volatile uint32_t timerValue = 0;
-volatile bool periodCaptured = false;
 volatile bool interruptTriggered = false;
-volatile int failure_code = 0;
 
 void setAdcbit(){
   // ADC initialization for reading the thermistor
